@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SummaryBuddy Prototype</title>
+<style>
+body { font-family: Arial, sans-serif; margin:20px; }
+textarea { width:100%; height:200px; padding:10px; margin-bottom:10px; }
+button { padding:10px 20px; font-size:16px; }
+#output { margin-top:20px; padding:15px; border:1px solid #ccc; background:#f9f9f9; white-space:pre-line; }
+</style>
+</head>
+<body>
+<h1>SummaryBuddy Prototype</h1>
+<p>Paste text below and click "Summarize" to get a concise summary.</p>
+<textarea id="inputText" placeholder="Paste your email or conversation here..."></textarea><br>
+<label for="numSentences">Number of sentences:</label>
+<select id="numSentences">
+  <option value="1">1</option>
+  <option value="2" selected>2</option>
+  <option value="3">3</option>
+  <option value="4">4</option>
+</select>
+<button onclick="runSummary()">Summarize</button>
+<div id="output"></div>
+<script>
+const stopwords = new Set(["a","an","the","and","or","but","if","to","from","with","without","on","in","at","by","for","of","over","into","during","including","until","against","among","throughout","about","above","below","between","after","before","under","again","further","then","once","here","there","all","any","both","each","few","more","most","other","some","such","no","nor","not","only","own","same","so","than","too","very","s","t","can","will","just","don","should","now","is","are","was","were","be","been","has","have","had","do","does","did","having"]);
+
+function splitSentences(text) {
+    const re = /[^.!?]+[.!?]+\s*/g;
+    const matches = text.match(re);
+    if (matches) return matches.map(s => s.trim());
+    return [text.trim()];
+}
+function summarizeText(text, numSentences) {
+    const sentences = splitSentences(text);
+    if (sentences.length <= numSentences) return text;
+    // Word frequency
+    const freq = {};
+    sentences.forEach(sentence => {
+        const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
+        words.forEach(word => {
+            if (!stopwords.has(word)) {
+                freq[word] = (freq[word] || 0) + 1;
+            }
+        });
+    });
+    const maxFreq = Math.max(...Object.values(freq));
+    // Normalize frequencies
+    for (const w in freq) { freq[w] /= maxFreq; }
+    // Score sentences
+    const scores = sentences.map((sentence, index) => {
+        let score = 0;
+        const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
+        words.forEach(word => {
+            if (freq[word]) score += freq[word];
+        });
+        return { index, score };
+    });
+    scores.sort((a,b) => b.score - a.score);
+    const top = scores.slice(0, numSentences).map(item => item.index).sort((a,b) => a - b);
+    return top.map(i => sentences[i]).join(' ');
+}
+function runSummary() {
+    const text = document.getElementById('inputText').value;
+    const num = parseInt(document.getElementById('numSentences').value);
+    if (!text.trim()) {
+        document.getElementById('output').innerText = 'Please enter some text.';
+        return;
+    }
+    const summary = summarizeText(text, num);
+    document.getElementById('output').innerText = summary;
+}
+</script>
+</body>
+</html>

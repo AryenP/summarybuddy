@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SummaryBuddy – AI communication assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Inter, Arial, sans-serif;
+        }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color:#fff;
+            padding:120px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero h1 {
+            font-size:3rem;
+            font-weight:700;
+        }
+        .hero p {
+            font-size:1.25rem;
+            margin-bottom:1.5rem;
+        }
+        .feature-icon {
+            font-size:2.5rem;
+            color:#764ba2;
+            margin-bottom:15px;
+        }
+        .stats {
+            background-color:#f8f9fa;
+            padding:60px 0;
+        }
+        .stat-number {
+            font-size:2.5rem;
+            font-weight:700;
+            color:#764ba2;
+        }
+        .cta {
+            background: #764ba2;
+            color:#fff;
+            padding:60px 0;
+        }
+        .cta .form-control {
+            max-width:350px;
+        }
+        .trust-logos img {
+            max-height:40px;
+            margin:0 10px;
+            opacity:0.7;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">SummaryBuddy</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar" aria-controls="navBar" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navBar">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#stats">Stats</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#signup">Join waitlist</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <header class="hero text-center">
+        <div class="container">
+            <h1 class="mb-3">Tame your inbox and stay focused</h1>
+            <p class="lead mb-4">SummaryBuddy uses AI to turn email threads, chat conversations and documents into concise summaries and action items—right in your browser.</p>
+            <a href="#signup" class="btn btn-lg btn-light text-primary fw-semibold">Join the waitlist</a>
+        </div>
+    </header>
+    
+    <section id="features" class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Features designed for busy teams</h2>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3 text-center">
+                    <i class="bi bi-card-text feature-icon"></i>
+                    <h5>Unified summaries</h5>
+                    <p>Connect your email and chat accounts. SummaryBuddy condenses long conversations into clear snippets so you never miss the big picture.</p>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <i class="bi bi-calendar2-event feature-icon"></i>
+                    <h5>Daily digest</h5>
+                    <p>A focused recap of what matters each day, with highlights, decisions and deadlines at a glance.</p>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <i class="bi bi-list-check feature-icon"></i>
+                    <h5>Action items</h5>
+                    <p>Automatically extract tasks and questions from messages and sync them to your to‑do list.</p>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <i class="bi bi-heart-pulse feature-icon"></i>
+                    <h5>Stay balanced</h5>
+                    <p>Reduce information overload and prevent burnout by focusing on meaningful work instead of endless notifications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="stats" class="stats text-center">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-6 col-md-3">
+                    <div class="stat-number">68%+</div>
+                    <p>of knowledge workers struggle with the pace and volume of communication.</p>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-number">46%</div>
+                    <p>of remote workers feel burned out from information overload.</p>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-number">86%</div>
+                    <p>of employees say poor communication leads to workplace failures.</p>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-number">73%</div>
+                    <p>believe generative AI tools help avoid miscommunication.</p>
+                </div>
+            </div>
+            <div class="mt-5">
+                <h5 class="fw-bold mb-3">Trusted by teams worldwide</h5>
+                <div class="d-flex flex-wrap justify-content-center align-items-center trust-logos">
+                    <img src="https://dummyimage.com/100x40/cccccc/000000&text=Company+A" alt="Company A">
+                    <img src="https://dummyimage.com/100x40/cccccc/000000&text=Company+B" alt="Company B">
+                    <img src="https://dummyimage.com/100x40/cccccc/000000&text=Company+C" alt="Company C">
+                    <img src="https://dummyimage.com/100x40/cccccc/000000&text=Company+D" alt="Company D">
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="signup" class="cta text-center">
+        <div class="container">
+            <h2 class="mb-4">Join our early access list</h2>
+            <p class="mb-4">Be among the first to experience smarter communication. Enter your email and we’ll let you know when SummaryBuddy launches.</p>
+            <div class="row justify-content-center">
+                <div class="col-auto">
+                    <form class="d-flex" action="#" onsubmit="alert('Thank you! We will notify you upon launch.'); return false;">
+                        <input type="email" class="form-control me-2" placeholder="Your email" required>
+                        <button type="submit" class="btn btn-light text-primary fw-semibold">Notify me</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <footer class="text-center py-4">
+        <small>© 2025 SummaryBuddy. All rights reserved.</small>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
