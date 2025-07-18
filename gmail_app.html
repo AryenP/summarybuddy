@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SummaryBuddy Gmail API Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <h2 class="mb-4">SummaryBuddy Gmail API Demo</h2>
+    <p>This page demonstrates how SummaryBuddy can connect to Gmail via Google's OAuth 2.0 and Gmail API to fetch messages and generate summaries. To use it, you must create your own Google Cloud Project with Gmail API enabled.</p>
+    <ol>
+        <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> and create a new project.</li>
+        <li>Enable the Gmail API for that project.</li>
+        <li>Under "Credentials", create an OAuth client ID (type: Web application). Add <code>http://localhost</code> or your own domain as an authorized JavaScript origin.</li>
+        <li>Replace <code>YOUR_CLIENT_ID</code> and <code>YOUR_API_KEY</code> below with the values from your credentials.</li>
+    </ol>
+    <button id="authorize_button" class="btn btn-primary mb-3">Authorize Gmail Access</button>
+    <button id="signout_button" class="btn btn-secondary mb-3" style="display:none;">Sign Out</button>
+    <div id="content" style="display:none;">
+        <h5>Latest Message Summary</h5>
+        <pre id="summary" style="white-space: pre-wrap; background:#f8f9fa; padding:10px; border-radius:5px;"></pre>
+        <h5>Action Items</h5>
+        <pre id="tasks" style="white-space: pre-wrap; background:#f8f9fa; padding:10px; border-radius:5px;"></pre>
+        <h5>Suggested Reply</h5>
+        <pre id="reply" style="white-space: pre-wrap; background:#f8f9fa; padding:10px; border-radius:5px;"></pre>
+    </div>
+</div>
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+    // TODO: Replace with your own values
+    const CLIENT_ID = 'YOUR_CLIENT_ID';
+    const API_KEY = 'YOUR_API_KEY';
+    const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
+    const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest';
+
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
+
+    document.getElementById('authorize_button').style.display = 'none';
+    document.getElementById('signout_button').style.display = 'none';
+
+    function gapiLoaded() {
+      gapi.load('client', initializeGapiClient);
+    }
+
+    async function initializeGapiClient() {
+      await gapi.client.init({
+        apiKey: API_KEY,
+        discoveryDocs: [DISCOVERY_DOC],
+      });
+      gapiInited = true;
+      maybeEnableButtons();
+    }
+
+    function gisLoaded() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: '' // defined later
+      });
+      gisInited = true;
+      maybeEnableButtons();
+    }
+
+    function maybeEnableButtons() {
+      if (gapiInited && gisInited) {
+        document.getElementById('authorize_button').style.display = 'inline-block';
+      }
+    }
+
+    document.getElementById('authorize_button').onclick = handleAuthClick;
+    document.getElementById('signout_button').onclick = handleSignoutClick;
+
+    function handleAuthClick() {
+      tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+          throw(resp);
+        }
+        document.getElementById('signout_button').style.display = 'inline-block';
+        document.getElementById('authorize_button').style.display = 'none';
+        await listAndSummarizeLatestMessage();
+      };
+
+      if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+      } else {
+        tokenClient.requestAccessToken({prompt: ''});
+      }
+    }
+
+    function handleSignoutClick() {
+      const token = gapi.client.getToken();
+      if (token !== null) {
+        google.accounts.oauth2.revoke(token.access_token);
+        gapi.client.setToken('');
+        document.getElementById('signout_button').style.display = 'none';
+        document.getElementById('authorize_button').style.display = 'inline-block';
+        document.getElementById('content').style.display = 'none';
+      }
+    }
+
+    async function listAndSummarizeLatestMessage() {
+      try {
+        const listResponse = await gapi.client.gmail.users.messages.list({
+          userId: 'me',
+          maxResults: 1,
+          q: 'in:inbox'
+        });
+        const messages = listResponse.result.messages;
+        if (!messages || messages.length === 0) {
+          alert('No messages found');
+          return;
+        }
+        const messageId = messages[0].id;
+        const getResponse = await gapi.client.gmail.users.messages.get({
+          userId: 'me', id: messageId, format: 'full'
+        });
+        const message = getResponse.result;
+        let body = '';
+        function getBody(parts) {
+          for (const part of parts) {
+            if (part.parts) {
+              const result = getBody(part.parts);
+              if (result) return result;
+            } else if (part.mimeType === 'text/plain' && part.body && part.body.data) {
+              return atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/')); 
+            }
+          }
+          return '';
+        }
+        body = getBody(message.payload.parts || []);
+        if (!body) {
+          // fallback to snippet
+          body = message.snippet;
+        }
+        // Summarize body
+        const summaryData = summarizeAndExtract(body);
+        document.getElementById('summary').innerText = summaryData.summary || 'No summary available.';
+        document.getElementById('tasks').innerText = summaryData.tasks.length ? summaryData.tasks.join('\n') : 'No tasks detected.';
+        document.getElementById('reply').innerText = summaryData.reply || 'No reply suggestion.';
+        document.getElementById('content').style.display = 'block';
+      } catch (err) {
+        console.error(err);
+        alert('Error fetching messages. See console for details.');
+      }
+    }
+
+    function summarizeAndExtract(text) {
+      text = text.replace(/\s+/g, ' ').trim();
+      if (!text) return { summary:'', tasks: [], reply:'' };
+      const stopwords = new Set(['a','an','the','and','or','but','if','in','on','at','to','of','for','with','is','are','was','were','be','by','as','that','this','it','you','i','we','they','he','she','him','her','them','me','my','your','our','their']);
+      function summarize(text, count) {
+        const sentences = text.match(/[^\.!?]+[\.!?]+/g) || [text];
+        const wordFreq = {};
+        sentences.forEach(s => {
+          const words = s.toLowerCase().match(/\b\w+\b/g) || [];
+          words.forEach(word => {
+            if (!stopwords.has(word)) {
+              wordFreq[word] = (wordFreq[word] || 0) + 1;
+            }
+          });
+        });
+        const scores = sentences.map(s => {
+          const words = s.toLowerCase().match(/\b\w+\b/g) || [];
+          let score = 0;
+          words.forEach(w => {
+            if (wordFreq[w]) score += wordFreq[w];
+          });
+          return score;
+        });
+        const sorted = sentences.map((s,i) => ({ sentence: s.trim(), score: scores[i] }))
+          .sort((a,b) => b.score - a.score)
+          .slice(0, count)
+          .sort((a,b) => text.indexOf(a.sentence) - text.indexOf(b.sentence));
+        return sorted.map(obj => obj.sentence).join(' ');
+      }
+      function extractTasks(text) {
+        const taskPatterns = [/(?:need to|must|should|please|kindly)\s+([^.]+?)(?:\.|!|$)/gi];
+        let tasks = [];
+        taskPatterns.forEach(pattern => {
+          let match;
+          while ((match = pattern.exec(text)) !== null) {
+            tasks.push(match[1].trim());
+          }
+        });
+        return tasks;
+      }
+      function generateReply(summary, tasks) {
+        let reply = '';
+        if (summary) reply += `Thanks for the update. Here’s my understanding: ${summary}`;
+        if (tasks && tasks.length) {
+          reply += ` I’ll make sure to address the following: ${tasks.join(', ')}.`;
+        }
+        return reply;
+      }
+      const summary = summarize(text, 3);
+      const tasks = extractTasks(text);
+      const reply = generateReply(summary, tasks);
+      return { summary, tasks, reply };
+    }
+
+    // Load the Google API libraries
+    window.onload = () => {
+      gapiLoaded();
+      google.accounts.oauth2.initTokenClient;
+    };
+</script>
+<script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>
