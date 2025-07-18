@@ -1,77 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SummaryBuddy Prototype</title>
-<style>
-body { font-family: Arial, sans-serif; margin:20px; }
-textarea { width:100%; height:200px; padding:10px; margin-bottom:10px; }
-button { padding:10px 20px; font-size:16px; }
-#output { margin-top:20px; padding:15px; border:1px solid #ccc; background:#f9f9f9; white-space:pre-line; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SummaryBuddy Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Inter, Arial, sans-serif;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    </style>
 </head>
 <body>
-<h1>SummaryBuddy Prototype</h1>
-<p>Paste text below and click "Summarize" to get a concise summary.</p>
-<textarea id="inputText" placeholder="Paste your email or conversation here..."></textarea><br>
-<label for="numSentences">Number of sentences:</label>
-<select id="numSentences">
-  <option value="1">1</option>
-  <option value="2" selected>2</option>
-  <option value="3">3</option>
-  <option value="4">4</option>
-</select>
-<button onclick="runSummary()">Summarize</button>
-<div id="output"></div>
-<script>
-const stopwords = new Set(["a","an","the","and","or","but","if","to","from","with","without","on","in","at","by","for","of","over","into","during","including","until","against","among","throughout","about","above","below","between","after","before","under","again","further","then","once","here","there","all","any","both","each","few","more","most","other","some","such","no","nor","not","only","own","same","so","than","too","very","s","t","can","will","just","don","should","now","is","are","was","were","be","been","has","have","had","do","does","did","having"]);
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">SummaryBuddy Demo</h1>
+        <p class="lead text-center mb-5">Paste text below and see how SummaryBuddy condenses it, extracts action items, and drafts a reply.</p>
+        <form onsubmit="runSummarizer(); return false;">
+            <div class="mb-3">
+                <textarea id="inputText" class="form-control" rows="6" placeholder="Paste your email or conversation here..."></textarea>
+            </div>
+            <div class="row align-items-end mb-4 gy-2">
+                <div class="col-md-4">
+                    <label for="numSentences" class="form-label">Summary length</label>
+                    <select id="numSentences" class="form-select">
+                        <option value="1">1 sentence</option>
+                        <option value="2" selected>2 sentences</option>
+                        <option value="3">3 sentences</option>
+                        <option value="4">4 sentences</option>
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <button type="submit" class="btn btn-primary">Generate summary &amp; tasks</button>
+                </div>
+                <div class="col-md-auto">
+                    <button type="button" class="btn btn-secondary" onclick="clearAll()">Clear</button>
+                </div>
+            </div>
+        </form>
+        <div id="results" class="d-none">
+            <div class="mb-4">
+                <h4>Summary</h4>
+                <pre id="summaryOutput" class="border rounded p-3 bg-white"></pre>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('summaryOutput')"><i class="bi bi-clipboard"></i> Copy summary</button>
+            </div>
+            <div class="mb-4">
+                <h4>Action items</h4>
+                <ul id="tasksOutput" class="list-group mb-2"></ul>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyTasks()"><i class="bi bi-clipboard"></i> Copy tasks</button>
+            </div>
+            <div class="mb-4">
+                <h4>Suggested reply</h4>
+                <pre id="replyOutput" class="border rounded p-3 bg-white"></pre>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('replyOutput')"><i class="bi bi-clipboard"></i> Copy reply</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    // List of common stopwords to ignore in frequency calculation
+    const stopwords = new Set([
+        "a","an","the","and","or","but","if","to","from","with","without","on","in","at","by",
+        "for","of","over","into","during","including","until","against","among","throughout","about",
+        "above","below","between","after","before","under","again","further","then","once","here",
+        "there","all","any","both","each","few","more","most","other","some","such","no","nor",
+        "not","only","own","same","so","than","too","very","s","t","can","will","just","don",
+        "should","now","is","are","was","were","be","been","has","have","had","do","does","did",
+        "having"
+    ]);
 
-function splitSentences(text) {
-    const re = /[^.!?]+[.!?]+\s*/g;
-    const matches = text.match(re);
-    if (matches) return matches.map(s => s.trim());
-    return [text.trim()];
-}
-function summarizeText(text, numSentences) {
-    const sentences = splitSentences(text);
-    if (sentences.length <= numSentences) return text;
-    // Word frequency
-    const freq = {};
-    sentences.forEach(sentence => {
-        const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
-        words.forEach(word => {
-            if (!stopwords.has(word)) {
-                freq[word] = (freq[word] || 0) + 1;
+    // Split text into sentences using punctuation
+    function splitSentences(text) {
+        const re = /[^.!?]+[.!?]+\s*/g;
+        const matches = text.match(re);
+        if (matches) return matches.map(s => s.trim());
+        return [text.trim()];
+    }
+
+    // Generate a frequency-based summary
+    function summarizeText(text, numSentences) {
+        const sentences = splitSentences(text);
+        if (sentences.length <= numSentences) return text;
+        const freq = {};
+        sentences.forEach(sentence => {
+            const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
+            words.forEach(word => {
+                if (!stopwords.has(word)) {
+                    freq[word] = (freq[word] || 0) + 1;
+                }
+            });
+        });
+        const maxFreq = Math.max(...Object.values(freq));
+        for (const w in freq) {
+            freq[w] /= maxFreq;
+        }
+        const scores = sentences.map((sentence, index) => {
+            let score = 0;
+            const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
+            words.forEach(word => {
+                if (freq[word]) score += freq[word];
+            });
+            return { index, score };
+        });
+        scores.sort((a, b) => b.score - a.score);
+        const top = scores.slice(0, numSentences).map(item => item.index).sort((a, b) => a - b);
+        return top.map(i => sentences[i]).join(' ');
+    }
+
+    // Extract potential action items based on keywords, modal verbs and questions
+    function extractTasks(text) {
+        const sentences = splitSentences(text);
+        const tasks = [];
+        const patterns = [
+            /(please|need|must|should|have to|to-do|action item|to do)/i,
+            /\b(send|follow up|follow-up|remind|ask|notify|contact|complete|finish|update|schedule|call|review|prepare)\b/i,
+            /\?/ // questions often indicate requests or tasks
+        ];
+        sentences.forEach(sent => {
+            const trimmed = sent.trim();
+            if (patterns.some(p => p.test(trimmed))) {
+                tasks.push(trimmed);
             }
         });
-    });
-    const maxFreq = Math.max(...Object.values(freq));
-    // Normalize frequencies
-    for (const w in freq) { freq[w] /= maxFreq; }
-    // Score sentences
-    const scores = sentences.map((sentence, index) => {
-        let score = 0;
-        const words = sentence.toLowerCase().match(/[a-z']+/g) || [];
-        words.forEach(word => {
-            if (freq[word]) score += freq[word];
-        });
-        return { index, score };
-    });
-    scores.sort((a,b) => b.score - a.score);
-    const top = scores.slice(0, numSentences).map(item => item.index).sort((a,b) => a - b);
-    return top.map(i => sentences[i]).join(' ');
-}
-function runSummary() {
-    const text = document.getElementById('inputText').value;
-    const num = parseInt(document.getElementById('numSentences').value);
-    if (!text.trim()) {
-        document.getElementById('output').innerText = 'Please enter some text.';
-        return;
+        return tasks;
     }
-    const summary = summarizeText(text, num);
-    document.getElementById('output').innerText = summary;
-}
-</script>
+
+    // Generate a polite reply based on summary and tasks
+    function generateReply(summary, tasks) {
+        let reply = "Thanks for the update.\n\nHere are the key points:\n" + summary + "\n\n";
+        if (tasks.length > 0) {
+            reply += "Action items:\n";
+            tasks.forEach((task, i) => {
+                reply += (i + 1) + ". " + task + "\n";
+            });
+            reply += "\n";
+        }
+        reply += "Let me know if I missed anything.";
+        return reply;
+    }
+
+    // Main function triggered when user submits the form
+    function runSummarizer() {
+        const text = document.getElementById('inputText').value.trim();
+        const num = parseInt(document.getElementById('numSentences').value);
+        if (!text) {
+            alert('Please enter some text.');
+            return;
+        }
+        const summary = summarizeText(text, num);
+        const tasks = extractTasks(text);
+        const reply = generateReply(summary, tasks);
+        document.getElementById('summaryOutput').innerText = summary;
+        const tasksList = document.getElementById('tasksOutput');
+        tasksList.innerHTML = '';
+        if (tasks.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            li.textContent = 'No action items detected.';
+            tasksList.appendChild(li);
+        } else {
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = task;
+                tasksList.appendChild(li);
+            });
+        }
+        document.getElementById('replyOutput').innerText = reply;
+        document.getElementById('results').classList.remove('d-none');
+    }
+
+    // Copy the text content of a given element to clipboard
+    function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Copied!');
+        });
+    }
+
+    // Copy the tasks list to clipboard
+    function copyTasks() {
+        const tasks = [];
+        document.querySelectorAll('#tasksOutput li').forEach(li => tasks.push(li.textContent));
+        navigator.clipboard.writeText(tasks.join('\n')).then(() => {
+            alert('Copied!');
+        });
+    }
+
+    // Reset the form and outputs
+    function clearAll() {
+        document.getElementById('inputText').value = '';
+        document.getElementById('numSentences').value = '2';
+        document.getElementById('summaryOutput').innerText = '';
+        document.getElementById('tasksOutput').innerHTML = '';
+        document.getElementById('replyOutput').innerText = '';
+        document.getElementById('results').classList.add('d-none');
+    }
+    </script>
 </body>
 </html>
